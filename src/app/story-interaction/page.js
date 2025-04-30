@@ -17,6 +17,7 @@ import {
   continueStory,
 } from '@/lib/storyGenerator'
 import { READABILITY_LEVELS } from '@/lib/constants'
+import { ImageGenerator } from '@/lib/imageGeneration/imageGenerator'
 
 export default function StoryInteraction() {
   const { storySettings, characters } = useStoryStore()
@@ -30,6 +31,35 @@ export default function StoryInteraction() {
   const [selectedAction, setSelectedAction] = useState(null)
   const [storyChapters, setStoryChapters] = useState([])
   const [currentChapter, setCurrentChapter] = useState(1)
+  const [imageGenerator] = useState(
+    () => new ImageGenerator()
+  )
+  const [isGeneratingImage, setIsGeneratingImage] =
+    useState(false)
+
+  const generateImageForStory = async (
+    storyContent,
+    characterNames
+  ) => {
+    try {
+      setIsGeneratingImage(true)
+      const result =
+        await imageGenerator.generateStoryImage(
+          storyContent,
+          characterNames.map((char) => char.name)
+        )
+      return {
+        image: result.image,
+      }
+    } catch (error) {
+      console.error('Error generating image:', error)
+      return {
+        image: null,
+      }
+    } finally {
+      setIsGeneratingImage(false)
+    }
+  }
 
   const handleGenerateStory = async () => {
     if (isGenerating) return
@@ -53,7 +83,13 @@ export default function StoryInteraction() {
         characters: selectedCharacters,
       })
 
-      // Save first chapter with number, title, and selected action
+      // Generate image for the story content
+      const storyImage = await generateImageForStory(
+        result.story,
+        selectedCharacters
+      )
+
+      // Save first chapter with number, title, selected action, and image
       const firstChapter = {
         chapterNumber: 1,
         title: 'The Beginning',
@@ -61,6 +97,7 @@ export default function StoryInteraction() {
         content: result.story,
         personas: result.personas,
         actionChoices: result.actionChoices,
+        image: storyImage.image,
       }
 
       setStoryChapters([firstChapter])
@@ -99,17 +136,24 @@ export default function StoryInteraction() {
         selectedAction: selectedAction,
       })
 
+      // Generate image for the continuation
+      const storyImage = await generateImageForStory(
+        result.story,
+        selectedCharacters
+      )
+
       // Increment chapter number
       const nextChapter = currentChapter + 1
       setCurrentChapter(nextChapter)
 
-      // Create new chapter object
+      // Create new chapter object with image
       const newChapter = {
         chapterNumber: nextChapter,
         title: selectedAction.title,
         selectedAction: selectedAction,
         content: result.story,
         actionChoices: result.actionChoices,
+        image: storyImage.image,
       }
 
       // Add new chapter to the list
@@ -241,10 +285,12 @@ export default function StoryInteraction() {
         <CardFooter>
           <Button
             onClick={handleGenerateStory}
-            disabled={isGenerating}
+            disabled={isGenerating || isGeneratingImage}
             className='w-full'>
             {isGenerating
               ? 'Generating Story...'
+              : isGeneratingImage
+              ? 'Generating Image...'
               : 'Generate Story'}
           </Button>
         </CardFooter>
@@ -279,6 +325,19 @@ export default function StoryInteraction() {
                 )}
               </CardHeader>
               <CardContent className='space-y-8'>
+                {chapter.image && (
+                  <div className='w-full'>
+                    <div className='relative w-full aspect-square rounded-lg overflow-hidden'>
+                      <Image
+                        src={chapter.image}
+                        alt={`Chapter ${chapter.chapterNumber} illustration`}
+                        fill
+                        className='object-cover'
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className='space-y-4'>
                   <h3 className='text-lg font-medium'>
                     Story
@@ -343,7 +402,7 @@ export default function StoryInteraction() {
                           ? 'ring-2 ring-primary'
                           : 'hover:bg-muted/50'
                       } ${
-                        isGenerating
+                        isGenerating || isGeneratingImage
                           ? 'opacity-70 pointer-events-none'
                           : ''
                       }`}
@@ -371,13 +430,19 @@ export default function StoryInteraction() {
             <CardFooter>
               <Button
                 className='w-full'
-                disabled={!selectedAction || isGenerating}
+                disabled={
+                  !selectedAction ||
+                  isGenerating ||
+                  isGeneratingImage
+                }
                 variant={
                   selectedAction ? 'default' : 'outline'
                 }
                 onClick={handleContinueStory}>
                 {isGenerating
                   ? 'Continuing Story...'
+                  : isGeneratingImage
+                  ? 'Generating Image...'
                   : 'Continue Story'}
               </Button>
             </CardFooter>
