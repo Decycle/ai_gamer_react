@@ -8,9 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@langchain/core':
+        specifier: ^0.3.50
+        version: 0.3.50(openai@4.96.2(zod@3.24.3))
       '@langchain/openai':
         specifier: ^0.5.7
-        version: 0.5.7(@langchain/core@0.3.49(openai@4.96.2(zod@3.24.3)))
+        version: 0.5.7(@langchain/core@0.3.50(openai@4.96.2(zod@3.24.3)))
       '@radix-ui/react-checkbox':
         specifier: ^1.2.3
         version: 1.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -37,7 +40,7 @@ importers:
         version: 2.1.1
       langchain:
         specifier: ^0.3.24
-        version: 0.3.24(@langchain/core@0.3.49(openai@4.96.2(zod@3.24.3)))(openai@4.96.2(zod@3.24.3))
+        version: 0.3.24(@langchain/core@0.3.50(openai@4.96.2(zod@3.24.3)))(openai@4.96.2(zod@3.24.3))
       lucide-react:
         specifier: ^0.503.0
         version: 0.503.0(react@19.1.0)
@@ -53,6 +56,9 @@ importers:
       tailwind-merge:
         specifier: ^3.2.0
         version: 3.2.0
+      zod:
+        specifier: ^3.24.3
+        version: 3.24.3
       zustand:
         specifier: ^5.0.3
         version: 5.0.3(react@19.1.0)
@@ -262,8 +268,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@langchain/core@0.3.49':
-    resolution: {integrity: sha512-ESEbxjtVtZTpgMPrLFEQZVHA5EVJuDYV3XzTFQ8haPHmBJfzskl6TINFttoGKTGbv799DZrRwnd5fbuCN5NDEA==}
+  '@langchain/core@0.3.50':
+    resolution: {integrity: sha512-0MBVe7dZ4h3a3MJAg/YesWBvwkDg8t2rDIGg2Q11DxRBnxB7OqmvBlbZ1ftaDvoBZzxMY+8E58OsCLuay3Bk9w==}
     engines: {node: '>=18'}
 
   '@langchain/openai@0.5.7':
@@ -2389,7 +2395,7 @@ snapshots:
   '@img/sharp-win32-x64@0.34.1':
     optional: true
 
-  '@langchain/core@0.3.49(openai@4.96.2(zod@3.24.3))':
+  '@langchain/core@0.3.50(openai@4.96.2(zod@3.24.3))':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       ansi-styles: 5.2.0
@@ -2406,9 +2412,9 @@ snapshots:
     transitivePeerDependencies:
       - openai
 
-  '@langchain/openai@0.5.7(@langchain/core@0.3.49(openai@4.96.2(zod@3.24.3)))':
+  '@langchain/openai@0.5.7(@langchain/core@0.3.50(openai@4.96.2(zod@3.24.3)))':
     dependencies:
-      '@langchain/core': 0.3.49(openai@4.96.2(zod@3.24.3))
+      '@langchain/core': 0.3.50(openai@4.96.2(zod@3.24.3))
       js-tiktoken: 1.0.20
       openai: 4.96.2(zod@3.24.3)
       zod: 3.24.3
@@ -2417,9 +2423,9 @@ snapshots:
       - encoding
       - ws
 
-  '@langchain/textsplitters@0.1.0(@langchain/core@0.3.49(openai@4.96.2(zod@3.24.3)))':
+  '@langchain/textsplitters@0.1.0(@langchain/core@0.3.50(openai@4.96.2(zod@3.24.3)))':
     dependencies:
-      '@langchain/core': 0.3.49(openai@4.96.2(zod@3.24.3))
+      '@langchain/core': 0.3.50(openai@4.96.2(zod@3.24.3))
       js-tiktoken: 1.0.20
 
   '@napi-rs/wasm-runtime@0.2.9':
@@ -3734,11 +3740,11 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  langchain@0.3.24(@langchain/core@0.3.49(openai@4.96.2(zod@3.24.3)))(openai@4.96.2(zod@3.24.3)):
+  langchain@0.3.24(@langchain/core@0.3.50(openai@4.96.2(zod@3.24.3)))(openai@4.96.2(zod@3.24.3)):
     dependencies:
-      '@langchain/core': 0.3.49(openai@4.96.2(zod@3.24.3))
-      '@langchain/openai': 0.5.7(@langchain/core@0.3.49(openai@4.96.2(zod@3.24.3)))
-      '@langchain/textsplitters': 0.1.0(@langchain/core@0.3.49(openai@4.96.2(zod@3.24.3)))
+      '@langchain/core': 0.3.50(openai@4.96.2(zod@3.24.3))
+      '@langchain/openai': 0.5.7(@langchain/core@0.3.50(openai@4.96.2(zod@3.24.3)))
+      '@langchain/textsplitters': 0.1.0(@langchain/core@0.3.50(openai@4.96.2(zod@3.24.3)))
       js-tiktoken: 1.0.20
       js-yaml: 4.1.0
       jsonpointer: 5.0.1

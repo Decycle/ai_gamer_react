@@ -1,29 +1,159 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { useStoryStore } from '@/store/useStoryStore'
 import Image from 'next/image'
+import {
+  generateStory,
+  continueStory,
+} from '@/lib/storyGenerator'
+import { READABILITY_LEVELS } from '@/lib/constants'
 
 export default function StoryInteraction() {
   const { storySettings, characters } = useStoryStore()
   const selectedCharacters = characters.filter(
     (char) => char.selected
   )
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedContent, setGeneratedContent] =
+    useState(null)
+  const [error, setError] = useState(null)
+  const [selectedAction, setSelectedAction] = useState(null)
+  const [storyChapters, setStoryChapters] = useState([])
+  const [currentChapter, setCurrentChapter] = useState(1)
+
+  const handleGenerateStory = async () => {
+    if (isGenerating) return
+
+    setIsGenerating(true)
+    setError(null)
+    setSelectedAction(null)
+    setStoryChapters([])
+    setCurrentChapter(1)
+
+    try {
+      const readabilityLabel =
+        READABILITY_LEVELS.find(
+          (r) => r.level === storySettings.readability
+        )?.label || 'Moderate'
+
+      const result = await generateStory({
+        setting: storySettings.setting,
+        tone: storySettings.tone,
+        readabilityLevel: readabilityLabel,
+        characters: selectedCharacters,
+      })
+
+      // Save first chapter with number, title, and selected action
+      const firstChapter = {
+        chapterNumber: 1,
+        title: 'The Beginning',
+        selectedAction: null,
+        content: result.story,
+        personas: result.personas,
+        actionChoices: result.actionChoices,
+      }
+
+      setStoryChapters([firstChapter])
+      setGeneratedContent(result)
+    } catch (error) {
+      console.error('Error generating story:', error)
+      setError(
+        'Failed to generate story. Please try again.'
+      )
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleSelectAction = (action) => {
+    if (isGenerating) return
+    setSelectedAction(action)
+  }
+
+  const handleContinueStory = async () => {
+    if (isGenerating || !selectedAction) return
+
+    setIsGenerating(true)
+    setError(null)
+
+    try {
+      // Get latest chapter to continue from
+      const latestChapter =
+        storyChapters[storyChapters.length - 1]
+
+      const result = await continueStory({
+        previousStory: latestChapter.content,
+        personas:
+          latestChapter.personas ||
+          generatedContent.personas,
+        selectedAction: selectedAction,
+      })
+
+      // Increment chapter number
+      const nextChapter = currentChapter + 1
+      setCurrentChapter(nextChapter)
+
+      // Create new chapter object
+      const newChapter = {
+        chapterNumber: nextChapter,
+        title: selectedAction.title,
+        selectedAction: selectedAction,
+        content: result.story,
+        actionChoices: result.actionChoices,
+      }
+
+      // Add new chapter to the list
+      setStoryChapters((prev) => [...prev, newChapter])
+
+      // Update current active choices
+      setGeneratedContent({
+        ...generatedContent,
+        actionChoices: result.actionChoices,
+      })
+
+      // Clear selected action
+      setSelectedAction(null)
+
+      // Scroll to the new chapter
+      setTimeout(() => {
+        const newChapterElement = document.getElementById(
+          `chapter-${nextChapter}`
+        )
+        if (newChapterElement) {
+          newChapterElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          })
+        }
+      }, 100)
+    } catch (error) {
+      console.error('Error continuing story:', error)
+      setError(
+        'Failed to continue the story. Please try again.'
+      )
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   return (
-    <div className='flex min-h-screen items-center justify-center p-4'>
-      <Card className='w-full max-w-4xl'>
+    <div className='flex min-h-screen flex-col p-4'>
+      <Card className='w-full max-w-4xl mx-auto mb-8'>
         <CardHeader>
           <CardTitle>Story Interaction</CardTitle>
           <CardDescription>
-            Here&apos;s all the data that was transferred
-            from the initialization page
+            Let&apos;s create a story with your selected
+            settings and characters
           </CardDescription>
         </CardHeader>
 
@@ -55,7 +185,11 @@ export default function StoryInteraction() {
                     Readability Level
                   </p>
                   <p className='text-sm text-muted-foreground'>
-                    {storySettings.readability}
+                    {READABILITY_LEVELS.find(
+                      (r) =>
+                        r.level ===
+                        storySettings.readability
+                    )?.label || 'Moderate'}
                   </p>
                 </div>
               </div>
@@ -103,7 +237,152 @@ export default function StoryInteraction() {
             </div>
           </div>
         </CardContent>
+
+        <CardFooter>
+          <Button
+            onClick={handleGenerateStory}
+            disabled={isGenerating}
+            className='w-full'>
+            {isGenerating
+              ? 'Generating Story...'
+              : 'Generate Story'}
+          </Button>
+        </CardFooter>
       </Card>
+
+      {error && (
+        <Card className='w-full max-w-4xl mx-auto bg-red-50'>
+          <CardContent className='pt-6'>
+            <p className='text-red-600'>{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {storyChapters.length > 0 && (
+        <div className='space-y-8 w-full max-w-4xl mx-auto'>
+          {/* Display all chapters */}
+          {storyChapters.map((chapter, index) => (
+            <Card
+              key={chapter.chapterNumber}
+              id={`chapter-${chapter.chapterNumber}`}
+              className='w-full mb-8'>
+              <CardHeader>
+                <CardTitle>
+                  Chapter {chapter.chapterNumber}:{' '}
+                  {chapter.title}
+                </CardTitle>
+                {chapter.selectedAction && (
+                  <CardDescription>
+                    Previous choice:{' '}
+                    {chapter.selectedAction.description}
+                  </CardDescription>
+                )}
+              </CardHeader>
+              <CardContent className='space-y-8'>
+                <div className='space-y-4'>
+                  <h3 className='text-lg font-medium'>
+                    Story
+                  </h3>
+                  <div className='whitespace-pre-wrap'>
+                    {chapter.content}
+                  </div>
+                </div>
+
+                {chapter.chapterNumber === 1 &&
+                  chapter.personas && (
+                    <div className='space-y-4'>
+                      <h3 className='text-lg font-medium'>
+                        Character Personas
+                      </h3>
+                      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        {chapter.personas.map(
+                          (persona, personaIndex) => (
+                            <Card
+                              key={personaIndex}
+                              className='bg-muted/50'>
+                              <CardHeader className='py-3'>
+                                <CardTitle className='text-md'>
+                                  {persona.name}
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <p className='text-sm'>
+                                  {persona.description}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {generatedContent?.actionChoices &&
+        storyChapters.length > 0 && (
+          <Card className='w-full max-w-4xl mx-auto mb-8'>
+            <CardHeader>
+              <CardTitle>What happens next?</CardTitle>
+              <CardDescription>
+                Choose one of these actions to continue the
+                story
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                {generatedContent.actionChoices.map(
+                  (action, index) => (
+                    <Card
+                      key={index}
+                      className={`cursor-pointer transition-all ${
+                        selectedAction === action
+                          ? 'ring-2 ring-primary'
+                          : 'hover:bg-muted/50'
+                      } ${
+                        isGenerating
+                          ? 'opacity-70 pointer-events-none'
+                          : ''
+                      }`}
+                      onClick={() =>
+                        handleSelectAction(action)
+                      }>
+                      <CardHeader className='py-3'>
+                        <CardTitle className='text-md'>
+                          {action.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className='space-y-2'>
+                        <p className='text-sm'>
+                          {action.description}
+                        </p>
+                        <p className='text-sm text-muted-foreground italic'>
+                          {action.consequence}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )
+                )}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button
+                className='w-full'
+                disabled={!selectedAction || isGenerating}
+                variant={
+                  selectedAction ? 'default' : 'outline'
+                }
+                onClick={handleContinueStory}>
+                {isGenerating
+                  ? 'Continuing Story...'
+                  : 'Continue Story'}
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
     </div>
   )
 }
