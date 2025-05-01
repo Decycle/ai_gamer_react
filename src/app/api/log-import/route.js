@@ -1,0 +1,61 @@
+import fs from 'fs'
+import path from 'path'
+import { NextResponse } from 'next/server'
+
+// Ensure logs directory exists
+const logsDir = path.resolve(process.cwd(), 'logs')
+if (!fs.existsSync(logsDir)) {
+  try {
+    fs.mkdirSync(logsDir, { recursive: true })
+    console.log('Created logs directory:', logsDir)
+  } catch (err) {
+    console.error('Failed to create logs directory:', err)
+  }
+}
+
+/**
+ * Save story import information to a log file
+ */
+export async function POST(request) {
+  try {
+    // Get the request data
+    const data = await request.json()
+    const { timestamp, metadata = {} } = data
+
+    // Create a timestamp for the log file name
+    const logTimestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')
+    const logFileName = `story-import-${logTimestamp}.json`
+    const logFilePath = path.join(logsDir, logFileName)
+
+    // Add timestamp to the log data
+    const logData = {
+      timestamp: timestamp || new Date().toISOString(),
+      metadata,
+    }
+
+    // Write the log file
+    fs.writeFileSync(
+      logFilePath,
+      JSON.stringify(logData, null, 2),
+      'utf8'
+    )
+
+    console.log(`Story import logged to: ${logFilePath}`)
+
+    return NextResponse.json({
+      success: true,
+      logFile: logFileName,
+    })
+  } catch (error) {
+    console.error('Error logging story import:', error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      { status: 500 }
+    )
+  }
+}

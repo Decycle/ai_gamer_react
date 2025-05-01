@@ -118,7 +118,7 @@ const CHARACTERS = [
 
 export const useStoryStore = create((set) => ({
   currentPage: 0,
-  totalPages: 3, // Changed from 4 to 3
+  totalPages: 3,
   storySettings: {
     setting: '',
     isCustom: true,
@@ -126,6 +126,12 @@ export const useStoryStore = create((set) => ({
     readability: 3,
   },
   characters: CHARACTERS,
+  importedStoryState: null,
+
+  // For storing story progress
+  storyChapters: [],
+  generatedContent: null,
+  currentChapter: 1,
 
   // Navigation
   nextPage: () =>
@@ -186,6 +192,32 @@ export const useStoryStore = create((set) => ({
           : char
       ),
     })),
+
+  // Import story state - directly set all relevant state properties
+  setImportedState: (storyState) =>
+    set({
+      importedStoryState: storyState,
+      storyChapters: storyState.storyChapters || [],
+      generatedContent: storyState.generatedContent || null,
+      currentChapter:
+        storyState.currentChapter ||
+        storyState.storyChapters?.length ||
+        1,
+      storySettings:
+        storyState.storySettings ||
+        useStoryStore.getState().storySettings,
+      characters:
+        storyState.characters ||
+        useStoryStore.getState().characters,
+    }),
+
+  // Clear story state
+  clearStoryState: () =>
+    set({
+      storyChapters: [],
+      generatedContent: null,
+      currentChapter: 1,
+    }),
 
   // Validation
   canProceed: () => {

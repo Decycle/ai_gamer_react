@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -20,6 +21,8 @@ import {
 import { Label } from '@/components/ui/label'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import JSZip from 'jszip'
+import { toast } from '@/components/ui/use-toast'
 
 const STORY_TONES = [
   'Lighthearted and humorous',
@@ -78,12 +81,143 @@ export default function StoryInitialization() {
     nextPage,
     prevPage,
     canProceed,
+    setImportedState,
   } = useStoryStore()
 
   const progress = ((currentPage + 1) / totalPages) * 100
   const selectedCharacters = characters.filter(
     (char) => char.selected
   )
+
+  // Add file input reference and import handling
+  const [isImporting, setIsImporting] = useState(false)
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith('.zip')) {
+      toast({
+        title: 'Invalid file format',
+        description:
+          'Please select a valid story backup ZIP file',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsImporting(true)
+
+    try {
+      toast({
+        title: 'Importing story...',
+        description: 'Reading backup file',
+      })
+
+      // Read the zip file
+      const zip = await JSZip.loadAsync(file)
+
+      // Extract the story state
+      const stateFile = zip.file('story-state.json')
+      if (!stateFile) {
+        throw new Error(
+          'Invalid backup file: missing story state data'
+        )
+      }
+
+      const stateJson = await stateFile.async('string')
+      const storyState = JSON.parse(stateJson)
+
+      // Process images
+      toast({
+        title: 'Processing images...',
+        description: 'Preparing story content',
+      })
+
+      const chapters = storyState.storyChapters || []
+
+      // Assets folder where images are stored
+      const assetsFolder = zip.folder('assets')
+      if (assetsFolder) {
+        // Process each chapter's image
+        for (let i = 0; i < chapters.length; i++) {
+          const imageFile = assetsFolder.file(
+            `${i + 1}.png`
+          )
+          if (imageFile) {
+            // Get image as base64
+            const imageBlob = await imageFile.async('blob')
+            const base64Image = await blobToBase64(
+              imageBlob
+            )
+
+            // Update chapter with actual image data
+            if (chapters[i]) {
+              chapters[i].image = base64Image
+              chapters[i].imagePending = false
+            }
+          }
+        }
+      }
+
+      // Import the story state
+      storyState.storyChapters = chapters
+      setImportedState(storyState)
+
+      // Log the import
+      await logImport({
+        filename: file.name,
+        chaptersCount: chapters.length,
+        timestamp: new Date().toISOString(),
+      })
+
+      // Success toast
+      toast({
+        title: 'Story imported successfully!',
+        description: `Loaded story with ${chapters.length} chapters`,
+      })
+
+      // Navigate to story interaction page
+      router.push('/story-interaction')
+    } catch (error) {
+      console.error('Error importing story:', error)
+      toast({
+        title: 'Import failed',
+        description:
+          error.message || 'Failed to import story backup',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  const logImport = async (metadata) => {
+    try {
+      await fetch('/api/log-import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          metadata,
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to log import:', error)
+      // Non-blocking - continue even if logging fails
+    }
+  }
 
   const renderPage = () => {
     switch (currentPage) {
@@ -306,51 +440,89 @@ export default function StoryInitialization() {
   }
 
   return (
-    <div className='flex min-h-screen items-center justify-center p-4'>
-      <Card className='w-full max-w-4xl'>
-        <CardHeader>
-          <CardTitle>Story Initialization</CardTitle>
-          <CardDescription>
-            Step {Math.min(currentPage, 2)} of 2:{' '}
-            {currentPage === 0
-              ? 'Story Settings'
-              : currentPage === 1
-              ? 'Character Selection'
-              : 'Review'}
-          </CardDescription>
-          <Progress
-            value={(Math.min(currentPage, 2) / 2) * 100}
-            className='mt-4'
-          />
-        </CardHeader>
-
-        <CardContent>{renderPage()}</CardContent>
-
-        <CardFooter className='flex justify-between'>
-          <Button
-            variant='outline'
-            onClick={prevPage}
-            disabled={currentPage === 0}>
-            Previous
-          </Button>
-          {currentPage === 2 ? (
-            <Button
-              size='lg'
-              className='bg-primary hover:bg-primary/90'
-              onClick={() =>
-                router.push('/story-interaction')
-              }>
-              Let&apos;s Go!
-            </Button>
+    <div className='flex min-h-screen flex-col p-4'>
+      <div className='mb-4 w-full max-w-4xl mx-auto flex justify-end'>
+        <input
+          id='import-file'
+          type='file'
+          accept='.zip'
+          className='hidden'
+          onChange={handleFileSelect}
+          disabled={isImporting}
+        />
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() =>
+            document.getElementById('import-file').click()
+          }
+          disabled={isImporting}
+          className='flex items-center gap-2'>
+          {isImporting ? (
+            <>
+              <div className='h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin'></div>
+              <span>Importing...</span>
+            </>
           ) : (
-            <Button
-              onClick={nextPage}
-              disabled={!canProceed()}>
-              Next
-            </Button>
+            <>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                width='16'
+                height='16'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='2'
+                strokeLinecap='round'
+                strokeLinejoin='round'>
+                <path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'></path>
+                <polyline points='17 8 12 3 7 8'></polyline>
+                <line x1='12' y1='3' x2='12' y2='15'></line>
+              </svg>
+              <span>Import Existing Story</span>
+            </>
           )}
-        </CardFooter>
-      </Card>
+        </Button>
+      </div>
+
+      <div className='flex flex-col gap-8 w-full max-w-4xl mx-auto'>
+        <Card>
+          <CardHeader>
+            <CardTitle>Create Your Story</CardTitle>
+            <CardDescription>
+              Follow the steps to create an interactive
+              story
+            </CardDescription>
+          </CardHeader>
+          <CardContent>{renderPage()}</CardContent>
+          <CardFooter className='flex justify-between border-t p-6 bg-muted/20'>
+            <Button
+              variant='outline'
+              onClick={prevPage}
+              disabled={currentPage === 0}>
+              Back
+            </Button>
+            <div className='flex-1 mx-8'>
+              <Progress value={progress} max={100} />
+            </div>
+            {currentPage === totalPages - 1 ? (
+              <Button
+                onClick={() =>
+                  router.push('/story-interaction')
+                }
+                disabled={!canProceed()}>
+                Start Story
+              </Button>
+            ) : (
+              <Button
+                onClick={nextPage}
+                disabled={!canProceed()}>
+                Next
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -12,9 +12,9 @@ const nextConfig = {
       process.env.USER_UPLOAD_IMG_SECRET,
   },
   // Use server actions for API routes
-  serverActions: {
-    bodySizeLimit: '10mb', // Allow larger payloads for image uploads
-  },
+  // serverActions: {
+  //   bodySizeLimit: '10mb', // Allow larger payloads for image uploads
+  // },
   // Make environment variables available to server-side code
   serverRuntimeConfig: {
     SPACE_URL: process.env.SPACE_URL,
