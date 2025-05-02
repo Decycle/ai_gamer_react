@@ -60,8 +60,8 @@ const READABILITY_LEVELS = [
 const CHARACTERS = [
   {
     id: 1,
-    name: 'Gerado',
-    image: '/assets/gerado.png',
+    name: 'Gerardo',
+    image: '/assets/gerardo.png',
     description:
       'A mysterious figure with a penchant for technology and innovation.',
     selected: false,

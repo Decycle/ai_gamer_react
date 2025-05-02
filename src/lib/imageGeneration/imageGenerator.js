@@ -29,10 +29,10 @@ const CHARACTERS = {
     img: '/assets/philip.png',
     description: 'Philip is a 22 years old Chinese male.',
   },
-  Gerado: {
-    img: '/assets/gerado.png',
+  Gerardo: {
+    img: '/assets/gerardo.png',
     description:
-      'Gerado is a 24 years old male with glasses.',
+      'Gerardo is a 24 years old male with glasses.',
   },
   Trump: {
     img: '/assets/trump.png',
